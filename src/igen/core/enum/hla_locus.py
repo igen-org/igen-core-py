@@ -31,7 +31,7 @@ class HlaLocus:
     group: HlaLocusGroup
     chain_type: HlaLocusChain
 
-    _registry: ClassVar[list[HlaLocus]] = []
+    _registry: ClassVar[list["HlaLocus"]] = []
 
     def __post_init__(self):
         self.__class__._registry.append(self)
@@ -60,11 +60,11 @@ class HlaLocus:
         return self.group.is_class_ii
 
     @classmethod
-    def _loci(cls) -> Iterable[HlaLocus]:
+    def _loci(cls) -> Iterable["HlaLocus"]:
         return cls._registry
 
     @classmethod
-    def from_value(cls, value: Optional[str | HlaLocusEnum]) -> Optional[HlaLocus]:
+    def from_value(cls, value: Optional[str | HlaLocusEnum]) -> Optional["HlaLocus"]:
         if value is None:
             return None
 

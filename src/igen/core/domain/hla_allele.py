@@ -40,7 +40,7 @@ class HlaAlleleProtocol(Protocol):
     display_field_count: int
 
     @classmethod
-    def from_string(cls, allele: str) -> HlaAlleleProtocol:
+    def from_string(cls, allele: str) -> "HlaAlleleProtocol":
         """Parse a raw allele string into an instance."""
         ...
 
@@ -49,7 +49,7 @@ class HlaAlleleProtocol(Protocol):
         """Return ``True`` when the provided string is a well-formed HLA allele."""
         ...
 
-    def clone(self) -> HlaAlleleProtocol:
+    def clone(self) -> "HlaAlleleProtocol":
         """Return a shallow copy of the allele."""
         ...
 
@@ -79,7 +79,7 @@ class HlaAlleleProtocol(Protocol):
         """Whether the allele specificity ends with a MAC code suffix."""
         ...
 
-    def with_display_field_count(self, value: int) -> HlaAlleleProtocol:
+    def with_display_field_count(self, value: int) -> "HlaAlleleProtocol":
         """Return a new allele configured to display the specified number of fields."""
         ...
 
@@ -162,7 +162,7 @@ class HlaAllele(HlaAlleleProtocol):
             raise ValueError(f"Invalid specificity: {self.specificity}")
 
     @classmethod
-    def from_string(cls, allele: str) -> HlaAllele:
+    def from_string(cls, allele: str) -> "HlaAllele":
         """Parse a raw allele string (e.g. ``'A*01:01:01'``) into an instance."""
         locus_token, specificity = _extract_parts(allele)
         locus = _parse_locus(locus_token)
@@ -190,7 +190,7 @@ class HlaAllele(HlaAlleleProtocol):
 
         return _is_valid_specificity(specificity)
 
-    def clone(self) -> HlaAllele:
+    def clone(self) -> "HlaAllele":
         """Return a shallow copy of the current allele."""
         return HlaAllele(self.locus, self.specificity, self.field_count, self.mac_code, self.display_field_count)
 
@@ -227,7 +227,7 @@ class HlaAllele(HlaAlleleProtocol):
         parts = specificity.split(":")
         return ":".join(parts[: self.display_field_count])
 
-    def contains(self, other: HlaAlleleProtocol | str) -> bool:
+    def contains(self, other: "HlaAlleleProtocol | str") -> bool:
         """Return ``True`` when ``other`` is a less specific allele prefix of this one."""
         candidate = HlaAllele.from_string(other) if isinstance(other, str) else other
 
@@ -241,7 +241,7 @@ class HlaAllele(HlaAlleleProtocol):
         """Whether the allele specificity ends with a MAC code suffix."""
         return not is_blank(self.mac_code)
 
-    def with_display_field_count(self, value: int) -> HlaAllele:
+    def with_display_field_count(self, value: int) -> "HlaAllele":
         """Return a new allele configured to display the specified number of fields."""
         return HlaAllele(self.locus, self.specificity, self.field_count, self.mac_code, value)
 
