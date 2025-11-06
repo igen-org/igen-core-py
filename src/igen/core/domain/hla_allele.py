@@ -38,6 +38,7 @@ class HlaAlleleProtocol(Protocol):
     field_count: int
     mac_code: Optional[str]
     display_field_count: int
+    suffix: Optional[str]
 
     @classmethod
     def from_string(cls, allele: str) -> "HlaAlleleProtocol":
@@ -121,6 +122,36 @@ class HlaAlleleProtocol(Protocol):
         """Return the allele string truncated to its first (allelic group) field."""
         ...
 
+    @property
+    def is_null(self) -> bool:
+        """Whether the allele carries the null-expression ``N`` suffix."""
+        ...
+
+    @property
+    def is_low(self) -> bool:
+        """Whether the allele carries the low-expression ``L`` suffix."""
+        ...
+
+    @property
+    def is_questionable(self) -> bool:
+        """Whether the allele carries the questionable-expression ``Q`` suffix."""
+        ...
+
+    @property
+    def is_low_resolution(self) -> bool:
+        """Whether the allele is typed only to the low-resolution (one-field) level."""
+        ...
+
+    @property
+    def is_mid_resolution(self) -> bool:
+        """Whether the allele is typed to two fields with an appended MAC code."""
+        ...
+
+    @property
+    def is_high_resolution(self) -> bool:
+        """Whether the allele is typed to at least two fields without a MAC code."""
+        ...
+
 
 def _is_valid_specificity(specificity: str) -> bool:
     if is_blank(specificity):
@@ -168,6 +199,7 @@ class HlaAllele(HlaAlleleProtocol):
     field_count: int
     mac_code: Optional[str]
     display_field_count: int = 2
+    suffix: Optional[str] = None
 
     def __post_init__(self):
         """Validate specificity component immediately after initialization."""
@@ -181,12 +213,22 @@ class HlaAllele(HlaAlleleProtocol):
         locus = _parse_locus(locus_token)
         field_count = specificity.count(":") + 1
         mac_code = cls._extract_mac_code(specificity)
-        return cls(locus=locus, specificity=specificity, field_count=field_count, mac_code=mac_code)
+        suffix = cls._extract_suffix(specificity)
+        return cls(locus=locus, specificity=specificity, field_count=field_count, mac_code=mac_code, suffix=suffix)
 
     @staticmethod
     def _extract_mac_code(specificity: str) -> Optional[str]:
         last_field = specificity.split(":")[-1]
-        return last_field if last_field.isalpha() and last_field.isupper() and len(last_field) >= 2 else None
+        return last_field.upper() if len(last_field) >= 2 and last_field.isalpha() else None
+
+    @staticmethod
+    def _extract_suffix(specificity: str) -> Optional[str]:
+        last_field = specificity.split(":")[-1]
+        return (
+            last_field.upper()
+            if len(last_field) >= 3 and not last_field.isalpha() and last_field[-1].isalpha()
+            else None
+        )
 
     @classmethod
     def is_valid_allele(cls, allele: str) -> bool:
@@ -295,3 +337,33 @@ class HlaAllele(HlaAlleleProtocol):
     def allelic_group(self) -> str:
         """Return the allele string truncated to its first (allelic group) field."""
         return self.with_display_field_count(1).display(force_truncate=True)
+
+    @property
+    def is_null(self) -> bool:
+        """Whether the allele carries the null-expression ``N`` suffix."""
+        return self.suffix == "N"
+
+    @property
+    def is_low(self) -> bool:
+        """Whether the allele carries the low-expression ``L`` suffix."""
+        return self.suffix == "L"
+
+    @property
+    def is_questionable(self) -> bool:
+        """Whether the allele carries the questionable-expression ``Q`` suffix."""
+        return self.suffix == "Q"
+
+    @property
+    def is_low_resolution(self) -> bool:
+        """Whether the allele is typed only to the low-resolution (one-field) level."""
+        return self.field_count == 1
+
+    @property
+    def is_mid_resolution(self) -> bool:
+        """Whether the allele is typed to two fields with an appended MAC code."""
+        return self.field_count == 2 and self.has_mac_code
+
+    @property
+    def is_high_resolution(self) -> bool:
+        """Whether the allele is typed to at least two fields without a MAC code."""
+        return self.field_count >= 2 and not self.has_mac_code
