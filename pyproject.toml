@@ -1,11 +1,13 @@
 [project]
 name = "igen-core"
-version = "0.1.0"
+version = "0.2.0"
 description = ""
 authors = [{ name = "gvalves", email = "gustavo.alves@igen.org.br" }]
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["igen-shared @ git+https://github.com/igen-info/igen-shared-py.git"]
+dependencies = [
+    "igen-shared @ git+https://github.com/igen-info/igen-shared-py.git",
+]
 
 [tool.poetry]
 packages = [{ include = "igen", from = "src" }]
