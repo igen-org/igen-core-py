@@ -1,6 +1,6 @@
 [project]
 name = "igen-core"
-version = "0.2.0"
+version = "0.2.1"
 description = ""
 authors = [{ name = "gvalves", email = "gustavo.alves@igen.org.br" }]
 readme = "README.md"
