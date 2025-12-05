@@ -63,19 +63,21 @@ class HlaAlleleProtocol(Protocol):
         """Expose the canonical allele string as a property."""
         ...
 
-    def display(self, force_truncate: bool = False) -> str:
+    def display(self, force_truncate: bool = False, keep_suffix: bool = False) -> str:
         """Return the allele string truncated to ``display_field_count`` fields.
 
         When ``force_truncate`` is ``True`` the return value is always truncated,
         even if the original specificity already ends with a lettered suffix.
+        When ``keep_suffix`` is ``True`` the specificity suffix is always kept.
         """
         ...
 
-    def display_specificity(self, force_truncate: bool = False) -> str:
+    def display_specificity(self, force_truncate: bool = False, keep_suffix: bool = False) -> str:
         """Return the truncated specificity with locus-specific adjustments.
 
         When ``force_truncate`` is ``True`` the specificity is always truncated,
         even if the original string would normally be left intact.
+        When ``keep_suffix`` is ``True`` the specificity suffix is always kept.
         """
         ...
 
@@ -90,6 +92,19 @@ class HlaAlleleProtocol(Protocol):
 
     def with_display_field_count(self, value: int) -> "HlaAlleleProtocol":
         """Return a new allele configured to display the specified number of fields."""
+        ...
+
+    @property
+    def has_suffix(self) -> bool:
+        """Whether the allele has a suffix."""
+        ...
+
+    def without_suffix(self) -> "HlaAlleleProtocol":
+        """Return a copy of the allele without any suffix."""
+        ...
+
+    def as_resolution(self, n_field: int, keep_suffix: bool = True) -> "HlaAlleleProtocol":
+        """Return a copy of the allele truncated to ``n_field`` fields."""
         ...
 
     @property
@@ -120,6 +135,11 @@ class HlaAlleleProtocol(Protocol):
     @property
     def allelic_group(self) -> str:
         """Return the allele string truncated to its first (allelic group) field."""
+        ...
+
+    @property
+    def has_suffix(self) -> bool:
+        """Whether the allele has a suffix."""
         ...
 
     @property
@@ -154,9 +174,6 @@ class HlaAlleleProtocol(Protocol):
 
 
 def _is_valid_specificity(specificity: str) -> bool:
-    if is_blank(specificity):
-        return True
-
     normalized = specificity.upper()
 
     if normalized in _SPECIFICITY_EXCEPTIONS:
@@ -165,16 +182,17 @@ def _is_valid_specificity(specificity: str) -> bool:
     return bool(_SPECIFICITY_REGEX.fullmatch(specificity))
 
 
-def _parse_locus(locus_token: str) -> HlaLocus:
-    parsed = HlaLocus.from_value(locus_token)
+def _parse_locus(locus: str) -> HlaLocus:
+    norm_locus = locus.upper()
+    parsed = HlaLocus.from_value(norm_locus)
     if parsed is not None:
         return parsed
 
-    alternative = _LOCUS_ALTERNATIVE_MAP.get(locus_token)
+    alternative = _LOCUS_ALTERNATIVE_MAP.get(norm_locus)
     if alternative is not None:
         return alternative
 
-    raise ValueError(f"Unknown locus: {locus_token}")
+    raise ValueError(f"Unknown locus: {norm_locus}")
 
 
 def _extract_parts(allele: str) -> tuple[str, str]:
@@ -211,21 +229,39 @@ class HlaAllele(HlaAlleleProtocol):
         """Parse a raw allele string (e.g. ``'A*01:01:01'``) into an instance."""
         locus_token, specificity = _extract_parts(allele)
         locus = _parse_locus(locus_token)
-        field_count = specificity.count(":") + 1
-        mac_code = cls._extract_mac_code(specificity)
-        suffix = cls._extract_suffix(specificity)
+        field_count = cls.get_field_count(specificity)
+        mac_code = cls.get_mac_code(specificity)
+        suffix = cls.get_suffix(specificity)
         return cls(locus=locus, specificity=specificity, field_count=field_count, mac_code=mac_code, suffix=suffix)
 
     @staticmethod
-    def _extract_mac_code(specificity: str) -> Optional[str]:
+    def get_locus_str(allele: str) -> str:
+        locus, _ = _extract_parts(allele)
+        return locus
+
+    @staticmethod
+    def get_locus(allele: str) -> HlaLocus:
+        return _parse_locus(HlaAllele.get_locus_str(allele))
+
+    @staticmethod
+    def get_specificity(allele: str) -> str:
+        _, specificity = _extract_parts(allele)
+        return specificity
+
+    @staticmethod
+    def get_field_count(specificity: str) -> int:
+        return specificity.count(":") + 1
+
+    @staticmethod
+    def get_mac_code(specificity: str) -> Optional[str]:
         last_field = specificity.split(":")[-1]
         return last_field.upper() if len(last_field) >= 2 and last_field.isalpha() else None
 
     @staticmethod
-    def _extract_suffix(specificity: str) -> Optional[str]:
+    def get_suffix(specificity: str) -> Optional[str]:
         last_field = specificity.split(":")[-1]
         return (
-            last_field.upper()
+            last_field[-1].upper()
             if len(last_field) >= 3 and not last_field.isalpha() and last_field[-1].isalpha()
             else None
         )
@@ -247,7 +283,9 @@ class HlaAllele(HlaAlleleProtocol):
 
     def clone(self) -> "HlaAllele":
         """Return a shallow copy of the current allele."""
-        return HlaAllele(self.locus, self.specificity, self.field_count, self.mac_code, self.display_field_count)
+        return HlaAllele(
+            self.locus, self.specificity, self.field_count, self.mac_code, self.display_field_count, self.suffix
+        )
 
     def __str__(self) -> str:
         """Return the canonical allele string (e.g. ``'A*01:01'``)."""
@@ -258,21 +296,21 @@ class HlaAllele(HlaAlleleProtocol):
         """Expose the canonical allele string as a property."""
         return str(self)
 
-    def display(self, force_truncate: bool = False) -> str:
+    def display(self, force_truncate: bool = False, keep_suffix: bool = False) -> str:
         """Return the allele string truncated to ``display_field_count`` fields.
 
         Setting ``force_truncate`` forces truncation even when the specificity ends
         with a trailing letter that we would normally preserve.
         """
-        return self._reduce_specificity(str(self), force_truncate)
+        return self._reduce_specificity(str(self), force_truncate, keep_suffix)
 
-    def display_specificity(self, force_truncate: bool = False) -> str:
+    def display_specificity(self, force_truncate: bool = False, keep_suffix: bool = False) -> str:
         """Return the truncated specificity, applying DRB345 aliases when needed.
 
         Setting ``force_truncate`` forces truncation even when the specificity ends
         with a trailing letter that would normally keep the string intact.
         """
-        reduced = self._reduce_specificity(self.specificity, force_truncate)
+        reduced = self._reduce_specificity(self.specificity, force_truncate, keep_suffix)
 
         if not self.is_drb345:
             return reduced
@@ -283,12 +321,14 @@ class HlaAllele(HlaAlleleProtocol):
 
         return f"{alias}*{reduced}"
 
-    def _reduce_specificity(self, specificity: str, force_truncate: bool = False) -> str:
-        if not force_truncate and re.search(r"\d[A-Z]$", specificity):
+    def _reduce_specificity(self, specificity: str, force_truncate: bool = False, keep_suffix: bool = False) -> str:
+        if not force_truncate and self.has_suffix:
             return specificity
 
         parts = specificity.split(":")
-        return ":".join(parts[: self.display_field_count])
+        reduced = ":".join(parts[: self.display_field_count])
+
+        return reduced + self.suffix if keep_suffix else reduced
 
     def contains(self, other: "HlaAlleleProtocol | str") -> bool:
         """Return ``True`` when ``other`` is a less specific allele prefix of this one."""
@@ -306,7 +346,41 @@ class HlaAllele(HlaAlleleProtocol):
 
     def with_display_field_count(self, value: int) -> "HlaAllele":
         """Return a new allele configured to display the specified number of fields."""
-        return HlaAllele(self.locus, self.specificity, self.field_count, self.mac_code, value)
+        return HlaAllele(self.locus, self.specificity, self.field_count, self.mac_code, value, self.suffix)
+
+    def without_suffix(self) -> "HlaAllele":
+        """Return a copy of the allele without any suffix."""
+        if not self.has_suffix:
+            return self.clone()
+
+        return HlaAllele(
+            self.locus,
+            self.specificity[:-1],
+            self.field_count,
+            self.mac_code,
+            self.display_field_count,
+            None,
+        )
+
+    def as_resolution(self, n_field: int, keep_suffix: bool = True) -> "HlaAllele":
+        """Return a copy of the allele truncated to ``n_field`` fields."""
+        if n_field < 1:
+            raise ValueError("n_field must be >= 1")
+
+        if n_field > self.field_count:
+            return self.clone()
+
+        specificity = self._reduce_specificity(self.specificity, force_truncate=True)
+        suffix = self.suffix if keep_suffix and self.has_suffix else None
+
+        return HlaAllele(
+            self.locus,
+            specificity,
+            n_field,
+            HlaAllele.get_mac_code(specificity),
+            min(self.display_field_count, n_field),
+            suffix,
+        )
 
     @property
     def is_drb345(self) -> bool:
@@ -337,6 +411,11 @@ class HlaAllele(HlaAlleleProtocol):
     def allelic_group(self) -> str:
         """Return the allele string truncated to its first (allelic group) field."""
         return self.with_display_field_count(1).display(force_truncate=True)
+
+    @property
+    def has_suffix(self) -> bool:
+        """Whether the allele has a suffix."""
+        return not is_blank(self.suffix)
 
     @property
     def is_null(self) -> bool:

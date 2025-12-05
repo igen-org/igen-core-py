@@ -29,15 +29,19 @@ class HlaHaplotypeProtocol(Protocol):
         """Return a new haplotype with the allele stored for ``locus``."""
         ...
 
-    def has(self, locus: LocusInput) -> bool:
+    def has(self, locus: LocusInput, exact: bool = False) -> bool:
         """Whether an allele is registered for the provided locus."""
         ...
 
-    def swap(self, haplotype: "HlaHaplotypeProtocol", locus: LocusInput) -> Tuple["HlaHaplotypeProtocol", "HlaHaplotypeProtocol"]:
+    def swap(
+        self, haplotype: "HlaHaplotypeProtocol", locus: LocusInput
+    ) -> Tuple["HlaHaplotypeProtocol", "HlaHaplotypeProtocol"]:
         """Swap the allele at ``locus`` between two haplotypes."""
         ...
 
-    def swap_all(self, haplotype: "HlaHaplotypeProtocol", loci: Sequence[LocusInput]) -> Tuple["HlaHaplotypeProtocol", "HlaHaplotypeProtocol"]:
+    def swap_all(
+        self, haplotype: "HlaHaplotypeProtocol", loci: Sequence[LocusInput]
+    ) -> Tuple["HlaHaplotypeProtocol", "HlaHaplotypeProtocol"]:
         """Swap all specified loci between this haplotype and another."""
         ...
 
@@ -53,8 +57,7 @@ class HlaHaplotypeProtocol(Protocol):
         """Render the haplotype as a '+'-joined list of allele strings."""
         ...
 
-    def __iter__(self) -> Iterator[HlaAlleleProtocol]:
-        ...
+    def __iter__(self) -> Iterator[HlaAlleleProtocol]: ...
 
     @property
     def alleles(self) -> list[HlaAlleleProtocol]:
@@ -119,13 +122,19 @@ class HlaHaplotype(HlaHaplotypeProtocol):
 
     def set(self, locus: LocusInput, allele: HlaAlleleProtocol) -> HlaHaplotype:
         """Return a new haplotype with the allele stored for ``locus``."""
+        _locus = _coerce_locus(locus)
+        norm_locus = _normalize_locus(_locus)
+
+        if norm_locus != _normalize_locus(allele.locus):
+            return self
+
         mapping = dict(self._allele_map)
-        mapping[_normalize_locus(_coerce_locus(locus))] = allele
+        mapping[norm_locus] = allele
         return HlaHaplotype(mapping.values())
 
-    def has(self, locus: LocusInput) -> bool:
+    def has(self, locus: LocusInput, exact: bool = False) -> bool:
         """Whether an allele is registered for the provided locus."""
-        return self.get(locus) is not None
+        return self.get(locus, exact) is not None
 
     def swap(self, haplotype: "HlaHaplotypeProtocol", locus: LocusInput) -> Tuple["HlaHaplotype", "HlaHaplotype"]:
         """Swap the allele at ``locus`` between two haplotypes, returning clones."""
@@ -142,7 +151,9 @@ class HlaHaplotype(HlaHaplotypeProtocol):
 
         return first, second
 
-    def swap_all(self, haplotype: "HlaHaplotypeProtocol", loci: Sequence[LocusInput]) -> Tuple["HlaHaplotype", "HlaHaplotype"]:
+    def swap_all(
+        self, haplotype: "HlaHaplotypeProtocol", loci: Sequence[LocusInput]
+    ) -> Tuple["HlaHaplotype", "HlaHaplotype"]:
         """Swap all loci listed in ``loci`` between this haplotype and another."""
         pair: Tuple[HlaHaplotype, HlaHaplotype] = (self, haplotype)
 
