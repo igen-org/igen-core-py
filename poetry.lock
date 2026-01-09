@@ -2,7 +2,7 @@
 
 [[package]]
 name = "igen-shared"
-version = "0.1.0"
+version = "1.0.0"
 description = ""
 optional = false
 python-versions = ">=3.12"
@@ -12,11 +12,11 @@ develop = false
 
 [package.source]
 type = "git"
-url = "https://github.com/igen-info/igen-shared-py.git"
-reference = "v0.1.0"
-resolved_reference = "f253110e9beccc336270b76f76f42ccaf7141998"
+url = "https://github.com/igen-org/igen-shared-py.git"
+reference = "v1.0.0"
+resolved_reference = "d7df52de5da79fb29ae3f25115dde8f9daaa30e0"
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12"
-content-hash = "262e75dd2ddbf65d81eaf5d90c978ebc384442c2216e520f55ecd8473090baa9"
+content-hash = "b59007e81f5f97fe9af11df9915821bd90ed7362cdc7be581a9ab35d3d309b74"
