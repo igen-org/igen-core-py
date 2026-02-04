@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import ClassVar
 
 from .hla_locus_class import HlaLocusClass
 
@@ -23,6 +24,15 @@ class HlaLocusGroup:
     has_alpha: bool
     has_beta: bool
     classification: HlaLocusClass
+
+    A: ClassVar["HlaLocusGroup"]
+    B: ClassVar["HlaLocusGroup"]
+    C: ClassVar["HlaLocusGroup"]
+    DR: ClassVar["HlaLocusGroup"]
+    DQ: ClassVar["HlaLocusGroup"]
+    DP: ClassVar["HlaLocusGroup"]
+
+    GROUPS: ClassVar[tuple["HlaLocusGroup", ...]]
 
     @property
     def is_class_i(self) -> bool:

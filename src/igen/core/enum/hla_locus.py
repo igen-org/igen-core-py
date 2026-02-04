@@ -33,6 +33,21 @@ class HlaLocus:
 
     _registry: ClassVar[list["HlaLocus"]] = []
 
+    A: ClassVar["HlaLocus"]
+    B: ClassVar["HlaLocus"]
+    C: ClassVar["HlaLocus"]
+    DRB1: ClassVar["HlaLocus"]
+    DRB3: ClassVar["HlaLocus"]
+    DRB4: ClassVar["HlaLocus"]
+    DRB5: ClassVar["HlaLocus"]
+    DRB345: ClassVar["HlaLocus"]
+    DQB1: ClassVar["HlaLocus"]
+    DQA1: ClassVar["HlaLocus"]
+    DPB1: ClassVar["HlaLocus"]
+    DPA1: ClassVar["HlaLocus"]
+
+    LOCI: ClassVar[tuple["HlaLocus", ...]]
+
     def __post_init__(self):
         self.__class__._registry.append(self)
 
